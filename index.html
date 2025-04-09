@@ -1,1 +1,240 @@
-<!DOCTYPE html><html><head><title>Atomic Statistics</title></head><body><h1>Atomic Statistics v1.0.0</h1><p>[HTML content omitted for brevity]</p></body></html>
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('service-worker.js');
+      });
+    }
+  </script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atomic Statistics</title>
+  <style>
+    body {
+      font-family: 'Georgia', serif;
+      margin: 1rem;
+      background: #ffffff;
+      color: #222;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.25rem;
+    }
+    h2 {
+      font-size: 1.2rem;
+      font-weight: normal;
+      margin-top: 0;
+      color: #555;
+    }
+    button {
+      font-size: 1rem;
+      padding: 0.6rem 1.2rem;
+      margin: 0.3rem 0;
+      width: 100%;
+      max-width: 320px;
+      display: block;
+      border: 1px solid #444;
+      border-radius: 6px;
+      background-color: #f4f4f4;
+      color: #222;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #e0e0e0;
+    }
+    #tulos {
+      margin-top: 2rem;
+      font-size: 1.2rem;
+    }
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .result-box {
+      border: 2px solid #222;
+      padding: 1rem;
+      background: #f9f9fc;
+      display: inline-block;
+      width: 100%;
+      max-width: 300px;
+      font-size: 1.5rem;
+      font-family: 'Courier New', monospace;
+      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+    }
+    .probability-text {
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <h1>University of Birmingham</h1>
+  <h2>ACAAN Simulation: Atomic Stack</h2>
+  <div class="button-container">
+    <button onclick="arvoJako()">Randomize</button>
+    <button onclick="arvoUusiKortti()">New card</button>
+    <button onclick="arvoUusiSumma()">New location</button>
+  </div>
+  <div id="tulos"></div>
+
+  <script>
+    const symbolit = {"H": "♥", "D": "♦", "S": "♠", "C": "♣"};
+
+    const pakka1 = [
+  "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
+  "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
+  "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
+  "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
+];
+
+    const part1 = pakka1.slice(26, 39);
+    const part2 = pakka1.slice(39, 52).reverse();
+    const part3 = pakka1.slice(0, 13);
+    const part4 = pakka1.slice(13, 26).reverse();
+    const secondPack = [
+      ...part1.slice(0, 11).reverse(), ...part1.slice(11),
+      ...part2, ...part3.slice(0, 11).reverse(), ...part3.slice(11), ...part4
+    ];
+
+    const tuplapakka0 = [];
+    for (let i = 0; i < 52; i++) {
+      tuplapakka0.push(pakka1[i]);
+      tuplapakka0.push(secondPack[i]);
+    }
+    const tuplapakka2 = [...tuplapakka0].reverse();
+
+    let nykyinenSumma = null;
+    let nykyinenKortti = null;
+    let edellinenTulos = null;
+
+    function muodostaKorttiSymbolina(kortti) {
+      const maa = kortti.slice(-1);
+      const arvo = kortti.slice(0, -1);
+      const symbol = symbolit[maa];
+      const color = (maa === "H" || maa === "D") ? 'red' : 'black';
+      return `${arvo}<span style='color:${color}; font-size: 1.4em;'>${symbol}</span>`;
+    }
+
+    function arvoJako() {
+      const mahdolliset = [];
+      [0, 2].forEach(metodi => {
+        const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
+        for (let i = 0; i < pakka.length; i++) {
+          const kortti = pakka[i];
+          for (let summa = 1; summa <= 45; summa++) {
+            for (let n = 0; n <= summa; n++) {
+              const m = summa - n;
+              const index = 2 * n + m - 1;
+              const maxVisibleIndex = summa - 1;
+              if ((m - n) < 30 && index === i && index >= maxVisibleIndex) {
+                mahdolliset.push({ kortti, metodi, n, m });
+                break;
+              }
+            }
+          }
+        }
+      });
+
+      const satunnainen = mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
+      nykyinenSumma = satunnainen.n + satunnainen.m;
+      nykyinenKortti = satunnainen.kortti;
+      edellinenTulos = satunnainen;
+      naytaTulos(satunnainen);
+    }
+
+    function arvoUusiKortti() {
+      if (nykyinenSumma === null) return;
+      const vaihtoehdot = [];
+      [0, 2].forEach(metodi => {
+        const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
+        for (let i = 0; i < pakka.length; i++) {
+          const kortti = pakka[i];
+          for (let n = 0; n <= nykyinenSumma; n++) {
+            const m = nykyinenSumma - n;
+            const index = 2 * n + m - 1;
+            const maxVisibleIndex = nykyinenSumma - 1;
+            if ((m - n) < 30 && index === i && index >= maxVisibleIndex) {
+              const mahdollinen = { kortti, metodi, n, m };
+              if (!onSamaTulos(mahdollinen, edellinenTulos)) {
+                vaihtoehdot.push(mahdollinen);
+              }
+              break;
+            }
+          }
+        }
+      });
+      if (vaihtoehdot.length > 0) {
+        const satunnainen = vaihtoehdot[Math.floor(Math.random() * vaihtoehdot.length)];
+        edellinenTulos = satunnainen;
+        nykyinenKortti = satunnainen.kortti;
+        naytaTulos(satunnainen);
+      }
+    }
+
+    function arvoUusiSumma() {
+      if (!nykyinenKortti) return;
+      const vaihtoehdot = [];
+      [0, 2].forEach(metodi => {
+        const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
+        for (let i = 0; i < pakka.length; i++) {
+          if (pakka[i] === nykyinenKortti) {
+            for (let summa = 1; summa <= 45; summa++) {
+              for (let n = 0; n <= summa; n++) {
+                const m = summa - n;
+                const index = 2 * n + m - 1;
+                const maxVisibleIndex = summa - 1;
+                if ((m - n) < 30 && index === i && index >= maxVisibleIndex) {
+                  const mahdollinen = { kortti: nykyinenKortti, metodi, n, m };
+                  if (!onSamaTulos(mahdollinen, edellinenTulos)) {
+                    vaihtoehdot.push(mahdollinen);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+      });
+      if (vaihtoehdot.length > 0) {
+        const satunnainen = vaihtoehdot[Math.floor(Math.random() * vaihtoehdot.length)];
+        edellinenTulos = satunnainen;
+        nykyinenSumma = satunnainen.n + satunnainen.m;
+        naytaTulos(satunnainen);
+      }
+    }
+
+    function onSamaTulos(a, b) {
+      return a && b && a.kortti === b.kortti && a.metodi === b.metodi && a.n === b.n && a.m === b.m;
+    }
+
+    function naytaTulos({ kortti, metodi, n, m }) {
+      const korttiSymboli = muodostaKorttiSymbolina(kortti);
+      const nStr = String(n).padStart(2, '0');
+      const mStr = String(m).padStart(2, '0');
+      const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "2" : "1");
+      const todennakoisyys = `${metodiStr},${nStr}${mStr}`;
+
+      document.getElementById("tulos").innerHTML =
+        `<div class="result-box">
+          Card: ${korttiSymboli}<br>Location: ${n + m}
+        </div>
+        <br><br><br>
+        <span class="probability-text">Probability: ${todennakoisyys}</span>`;
+    }
+  </script>
+
+  <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
+    v1.0.0
+  </div>
+</body>
+</html>
