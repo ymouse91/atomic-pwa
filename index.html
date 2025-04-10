@@ -8,6 +8,24 @@
         navigator.serviceWorker.register('service-worker.js');
       });
     }
+
+    function confirmSelection() {
+      if (!edellinenTulos) return;
+      const { metodi, n, m } = edellinenTulos;
+      const nStr = String(n).padStart(2, '0');
+      const mStr = String(m).padStart(2, '0');
+      const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "3" : "2");
+      const todennakoisyys = `0,${metodiStr}${nStr}${mStr}`;
+      const container = document.getElementById("todennakoisyys-container");
+      if (container) {
+        const div = document.createElement("div");
+        div.id = "todennakoisyys";
+        div.className = "probability-text";
+        div.innerHTML = `<br><br>Database updated.<br>Popularity of selection: ${todennakoisyys}`;
+        container.innerHTML = '';
+        container.appendChild(div);
+      }
+    }
   </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -58,18 +76,6 @@
       align-items: center;
       gap: 0.4rem;
     }
-    .result-box {
-      border: 2px solid #222;
-      padding: 1rem;
-      background: #f9f9fc;
-      display: inline-block;
-      width: 100%;
-      max-width: 280px;
-      font-size: 1.5rem;
-      font-family: 'Courier New', monospace;
-      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
-      border-radius: 10px;
-    }
     .probability-text {
       font-size: 1rem;
       font-family: 'Courier New', monospace;
@@ -79,23 +85,26 @@
 </head>
 <body>
   <h1>University of Birmingham</h1>
-  <h2>ACAAN Simulation: Atomic Stack</h2>
+  <h2>Atomic Study</h2>
   <div class="button-container">
     <button onclick="arvoJako()">Randomize</button>
     <button onclick="arvoUusiKortti()">New card</button>
     <button onclick="arvoUusiSumma()">New location</button>
+    <button onclick="confirmSelection()">Confirm selection</button>
   </div>
   <div id="tulos"></div>
+  <div id="todennakoisyys-container"></div>
 
+  <!-- script tag begins -->
   <script>
     const symbolit = {"H": "♥", "D": "♦", "S": "♠", "C": "♣"};
 
     const pakka1 = [
-  "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
-  "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
-  "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
-  "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
-];
+      "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
+      "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
+      "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
+      "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
+    ];
 
     const part1 = pakka1.slice(26, 39);
     const part2 = pakka1.slice(39, 52).reverse();
@@ -125,18 +134,32 @@
       return `${arvo}<span style='color:${color}; font-size: 1.4em;'>${symbol}</span>`;
     }
 
+    function naytaTulos({ kortti, metodi, n, m }) {
+      const korttiSymboli = muodostaKorttiSymbolina(kortti);
+      document.getElementById("tulos").innerHTML =
+        `<div>Card: ${korttiSymboli}<br>Location: ${n + m}</div>`;
+      const container = document.getElementById("todennakoisyys-container");
+      if (container) container.innerHTML = '';
+    }
+
     function arvoJako() {
       const mahdolliset = [];
       [0, 2].forEach(metodi => {
         const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
         for (let i = 0; i < pakka.length; i++) {
           const kortti = pakka[i];
-          for (let summa = 1; summa <= 45; summa++) {
+          for (let summa = 1; summa <= 42; summa++) {
             for (let n = 0; n <= summa; n++) {
               const m = summa - n;
               const index = 2 * n + m - 1;
               const maxVisibleIndex = summa - 1;
-              if ((m - n) < 30 && index === i && index >= maxVisibleIndex) {
+              const tuplat = [];
+              for (let j = 0; j < n; j++) {
+                tuplat.push(pakka[metodi === 0 ? 2 * j : 2 * j + 1]);
+              }
+              const yksittaiset = m > 0 ? [pakka[2 * n + m - 1]] : [];
+              const kaikki = [...tuplat, ...yksittaiset];
+              if ((m - n) < 30 && index === i && index >= maxVisibleIndex && !(metodi === 0 && (n + m) >= 38 && m >= 2) && kaikki.includes(kortti)) {
                 mahdolliset.push({ kortti, metodi, n, m });
                 break;
               }
@@ -163,8 +186,14 @@
             const m = nykyinenSumma - n;
             const index = 2 * n + m - 1;
             const maxVisibleIndex = nykyinenSumma - 1;
-            if ((m - n) < 30 && index === i && index >= maxVisibleIndex) {
-              const mahdollinen = { kortti, metodi, n, m };
+            const mahdollinen = { kortti, metodi, n, m };
+            const tuplat = [];
+              for (let j = 0; j < n; j++) {
+                tuplat.push(pakka[metodi === 0 ? 2 * j : 2 * j + 1]);
+              }
+              const yksittaiset = m > 0 ? [pakka[2 * n + m - 1]] : [];
+              const kaikki = [...tuplat, ...yksittaiset];
+              if ((m - n) < 30 && index === i && index >= maxVisibleIndex && !(metodi === 0 && (n + m) >= 38 && m >= 2) && kaikki.includes(kortti)) {
               if (!onSamaTulos(mahdollinen, edellinenTulos)) {
                 vaihtoehdot.push(mahdollinen);
               }
@@ -193,7 +222,13 @@
                 const m = summa - n;
                 const index = 2 * n + m - 1;
                 const maxVisibleIndex = summa - 1;
-                if ((m - n) < 30 && index === i && index >= maxVisibleIndex) {
+                const tuplat = [];
+                for (let j = 0; j < n; j++) {
+                  tuplat.push(pakka[metodi === 0 ? 2 * j : 2 * j + 1]);
+                }
+                const yksittaiset = m > 0 ? [pakka[2 * n + m - 1]] : [];
+                const kaikki = [...tuplat, ...yksittaiset];
+                if ((m - n) < 30 && index === i && index >= maxVisibleIndex && !(metodi === 0 && summa >= 38 && m >= 2) && kaikki.includes(nykyinenKortti)) {
                   const mahdollinen = { kortti: nykyinenKortti, metodi, n, m };
                   if (!onSamaTulos(mahdollinen, edellinenTulos)) {
                     vaihtoehdot.push(mahdollinen);
@@ -216,23 +251,7 @@
     function onSamaTulos(a, b) {
       return a && b && a.kortti === b.kortti && a.metodi === b.metodi && a.n === b.n && a.m === b.m;
     }
-
-    function naytaTulos({ kortti, metodi, n, m }) {
-      const korttiSymboli = muodostaKorttiSymbolina(kortti);
-      const nStr = String(n).padStart(2, '0');
-      const mStr = String(m).padStart(2, '0');
-      const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "2" : "1");
-      const todennakoisyys = `${metodiStr},${nStr}${mStr}`;
-
-      document.getElementById("tulos").innerHTML =
-        `<div class="result-box">
-          Card: ${korttiSymboli}<br>Location: ${n + m}
-        </div>
-        <br><br><br>
-        <span class="probability-text">Probability: ${todennakoisyys}</span>`;
-    }
   </script>
-
   <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
     v1.0.0
   </div>
