@@ -21,7 +21,7 @@ if ('serviceWorker' in navigator) {
       const nStr = String(n).padStart(2, '0');
       const mStr = String(m).padStart(2, '0');
       const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "3" : "2");
-      const todennakoisyys = `0,${metodiStr}${nStr}${mStr}`;
+      const todennakoisyys = `0.${metodiStr}${nStr}${mStr} %`;
       const container = document.getElementById("todennakoisyys-container");
       if (container) {
         const div = document.createElement("div");
@@ -259,7 +259,7 @@ if ('serviceWorker' in navigator) {
     }
   </script>
   <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
-    v1.0.3
+    v1.0.4
   </div>
 </body>
 </html>
