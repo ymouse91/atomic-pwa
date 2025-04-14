@@ -15,29 +15,14 @@
     });
   });
 }
-    function confirmSelection() {
-      if (!edellinenTulos) return;
-      const { metodi, n, m } = edellinenTulos;
-      const nStr = String(n).padStart(2, '0');
-      const mStr = String(m).padStart(2, '0');
-      const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "3" : "2");
-      const todennakoisyys = `0.${metodiStr}${nStr}${mStr}%`;
-      const container = document.getElementById("todennakoisyys-container");
-      if (container) {
-        const div = document.createElement("div");
-        div.id = "todennakoisyys";
-        div.className = "probability-text";
-        div.innerHTML = `<br><br>Database updated.<br>Popularity of the selection: ${todennakoisyys}`;
-        container.innerHTML = '';
-        container.appendChild(div);
-      }
-    }
   </script>
+<meta charset="UTF-8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Atomic Statistics</title>
+
+  <title>Department of Psychology</title>
   <style>
     body {
       font-family: 'Georgia', serif;
@@ -72,6 +57,20 @@
     button:hover {
       background-color: #e0e0e0;
     }
+    .flash {
+      animation: flash 2s infinite;
+    }
+    .alternate {
+      animation: alternateFlash 2s infinite;
+    }
+    @keyframes flash {
+      0%, 100% { background-color: #f4f4f4; }
+      50% { background-color: #ffd700; }
+    }
+    @keyframes alternateFlash {
+      0%, 100% { background-color: #f4f4f4; }
+      50% { background-color: #add8e6; }
+    }
     #tulos {
       margin-top: 2rem;
       font-size: 1.2rem;
@@ -93,173 +92,192 @@
   <h1>University of Birmingham</h1>
   <h2>CogniCard Study</h2>
   <div class="button-container">
-    <button onclick="arvoJako()">Randomize</button>
-    <button onclick="arvoUusiKortti()">New Card</button>
-    <button onclick="arvoUusiSumma()">New Position</button>
+    <button id="randomizeBtn" onclick="arvoJako()">Randomize</button>
+    <button id="newCardBtn" onclick="arvoUusiKortti()">New Card</button>
+    <button id="newPositionBtn" onclick="arvoUusiSumma()">New Position</button>
     <button onclick="confirmSelection()">Confirm Selection</button>
   </div>
   <div id="tulos"></div>
   <div id="todennakoisyys-container"></div>
-
-  <!-- script tag begins -->
+  <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
+    v1.0.5
+  </div>
   <script>
-    const symbolit = {"H": "♥", "D": "♦", "S": "♠", "C": "♣"};
-
-    const pakka1 = [
-      "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
-      "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
-      "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
-      "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
-    ];
-
-    const part1 = pakka1.slice(26, 39);
-    const part2 = pakka1.slice(39, 52).reverse();
-    const part3 = pakka1.slice(0, 13);
-    const part4 = pakka1.slice(13, 26).reverse();
-    const secondPack = [
-      ...part1.slice(0, 11).reverse(), ...part1.slice(11),
-      ...part2, ...part3.slice(0, 11).reverse(), ...part3.slice(11), ...part4
-    ];
-
-    const tuplapakka0 = [];
-    for (let i = 0; i < 52; i++) {
-      tuplapakka0.push(pakka1[i]);
-      tuplapakka0.push(secondPack[i]);
-    }
-    const tuplapakka2 = [...tuplapakka0].reverse();
-
-    let nykyinenSumma = null;
-    let nykyinenKortti = null;
+    let randomizeTimer, alternateTimer;
+    const kortit = [...new Set(`6H,AS,8S,9S,KC,JD,5D,AH,3H,9H,3C,7S,7H,2S,QS,2H,QH,6D,2C,KD,4D,4H,JH,6C,4C,10C,4S,JS,2D,3S,9D,7D,AD,JC,8C,5S,AC,QC,QD,5H,7C,10H,9C,10D,8D,3D,8H,5C,6S,KH,10S,KS,4H,4D,KD,2C,6D,QH,2H,QS,2S,7H,7S,3C,9H,3H,AH,5D,JD,KC,9S,8S,AS,6H,6C,JH,10C,4C,KS,10S,KH,6S,5C,8H,3D,8D,10D,9C,10H,7C,5H,QD,QC,AC,5S,8C,JC,AD,7D,9D,3S,2D,JS,4S`.replace(/\s/g, '').split(',')
+      .filter((v, i, a) => a.indexOf(v) === i))];
     let edellinenTulos = null;
+    let viimeKortti = null;
+    let viimeSumma = null;
 
-    function muodostaKorttiSymbolina(kortti) {
-      const maa = kortti.slice(-1);
-      const arvo = kortti.slice(0, -1);
-      const symbol = symbolit[maa];
-      const color = (maa === "H" || maa === "D") ? 'red' : 'black';
-      return `${arvo}<span style='color:${color}; font-size: 1.4em;'>${symbol}</span>`;
+    function getVisible(deck, n, m, method) {
+      const visible = [];
+      const pakka = method === 2 ? [...deck].reverse() : [...deck];
+      let i = 0;
+      for (let j = 0; j < n; j++) {
+        visible.push(method === 0 ? pakka[i + 1] : pakka[i]);
+        i += 2;
+      }
+      for (let j = 0; j < m; j++) {
+        visible.push(pakka[i]);
+        i++;
+      }
+      return visible;
     }
 
-    function naytaTulos({ kortti, metodi, n, m }) {
-      const korttiSymboli = muodostaKorttiSymbolina(kortti);
-      document.getElementById("tulos").innerHTML =
-        `<div>Card: ${korttiSymboli}<br>Position: ${n + m}</div>`;
-      const container = document.getElementById("todennakoisyys-container");
-      if (container) container.innerHTML = '';
-    }
-
-    function arvoJako() {
-      const mahdolliset = [];
-      [0, 2].forEach(metodi => {
-        const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
-        for (let i = 0; i < pakka.length; i++) {
-          const kortti = pakka[i];
-          for (let summa = 1; summa <= 42; summa++) {
-            for (let n = 0; n <= summa; n++) {
-              const m = summa - n;
-              const index = 2 * n + m - 1;
-              const maxVisibleIndex = summa - 1;
-              const tuplat = [];
-              for (let j = 0; j < n; j++) {
-                tuplat.push(pakka[metodi === 0 ? 2 * j : 2 * j + 1]);
-              }
-              const yksittaiset = m > 0 ? [pakka[2 * n + m - 1]] : [];
-              const kaikki = [...tuplat, ...yksittaiset];
-              if ((m - n) < 30 && index === i && index >= maxVisibleIndex && !(metodi === 0 && (n + m) >= 38 && m >= 2) && kaikki.includes(kortti)) {
-                mahdolliset.push({ kortti, metodi, n, m });
-                break;
-              }
-            }
-          }
-        }
-      });
-
-      const satunnainen = mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
-      nykyinenSumma = satunnainen.n + satunnainen.m;
-      nykyinenKortti = satunnainen.kortti;
-      edellinenTulos = satunnainen;
-      naytaTulos(satunnainen);
-    }
-
-    function arvoUusiKortti() {
-      if (nykyinenSumma === null) return;
-      const vaihtoehdot = [];
-      [0, 2].forEach(metodi => {
-        const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
-        for (let i = 0; i < pakka.length; i++) {
-          const kortti = pakka[i];
-          for (let n = 0; n <= nykyinenSumma; n++) {
-            const m = nykyinenSumma - n;
-            const index = 2 * n + m - 1;
-            const maxVisibleIndex = nykyinenSumma - 1;
-            const mahdollinen = { kortti, metodi, n, m };
-            const tuplat = [];
-              for (let j = 0; j < n; j++) {
-                tuplat.push(pakka[metodi === 0 ? 2 * j : 2 * j + 1]);
-              }
-              const yksittaiset = m > 0 ? [pakka[2 * n + m - 1]] : [];
-              const kaikki = [...tuplat, ...yksittaiset];
-              if ((m - n) < 30 && index === i && index >= maxVisibleIndex && !(metodi === 0 && (n + m) >= 38 && m >= 2) && kaikki.includes(kortti)) {
-              if (!onSamaTulos(mahdollinen, edellinenTulos)) {
-                vaihtoehdot.push(mahdollinen);
-              }
+    function haeSallitutJaot(kortti) {
+      const tulokset = [];
+      const pakka = `6H,AS,8S,9S,KC,JD,5D,AH,3H,9H,3C,7S,7H,2S,QS,2H,QH,6D,2C,KD,4D,4H,JH,6C,4C,10C,4S,JS,2D,3S,9D,7D,AD,JC,8C,5S,AC,QC,QD,5H,7C,10H,9C,10D,8D,3D,8H,5C,6S,KH,10S,KS,4H,4D,KD,2C,6D,QH,2H,QS,2S,7H,7S,3C,9H,3H,AH,5D,JD,KC,9S,8S,AS,6H,6C,JH,10C,4C,KS,10S,KH,6S,5C,8H,3D,8D,10D,9C,10H,7C,5H,QD,QC,AC,5S,8C,JC,AD,7D,9D,3S,2D,JS,4S`.replace(/\s/g, '').split(',');
+      for (let summa = 1; summa <= 52; summa++) {
+        for (let method of [0, 2]) {
+          for (let n = 0; n <= summa; n++) {
+            const m = summa - n;
+            if (2 * n + m > pakka.length || n + m >= 38 || m - n >= 30) continue;
+            const näkyvät = getVisible(pakka, n, m, method);
+            if (näkyvät[näkyvät.length - 1] === kortti && new Set(näkyvät).size === näkyvät.length) {
+              tulokset.push({ kortti, n, m, metodi: method, summa: n + m });
               break;
             }
           }
         }
-      });
-      if (vaihtoehdot.length > 0) {
-        const satunnainen = vaihtoehdot[Math.floor(Math.random() * vaihtoehdot.length)];
-        edellinenTulos = satunnainen;
-        nykyinenKortti = satunnainen.kortti;
-        naytaTulos(satunnainen);
+      }
+      return tulokset;
+    }
+
+    function aloitaVilkutus() {
+      document.getElementById("randomizeBtn").classList.add("flash");
+    }
+
+    function arvoJako() {
+      selectionLocked = false;
+      document.getElementById("todennakoisyys-container").innerHTML = '';
+      lopetaVilkutus();
+      while (true) {
+        const kortti = kortit[Math.floor(Math.random() * kortit.length)];
+        const jaot = haeSallitutJaot(kortti);
+        if (jaot.length > 0) {
+          const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti || (j.n + j.m) !== viimeSumma);
+          if (mahdolliset.length === 0) continue;
+          const m0 = mahdolliset.filter(j => j.metodi === 0);
+          const m2 = mahdolliset.filter(j => j.metodi !== 0);
+          if (m0.length > 0 && Math.random() < 0.35) {
+            edellinenTulos = m0[Math.floor(Math.random() * m0.length)];
+          } else {
+            edellinenTulos = mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
+          }
+          viimeKortti = edellinenTulos.kortti;
+          viimeSumma = edellinenTulos.n + edellinenTulos.m;
+          naytaTulos();
+          kaynnistaVaihtovuorottelu();
+          break;
+        }
+      }
+    }
+
+    function arvoUusiKortti() {
+      if (selectionLocked) {
+        document.getElementById("randomizeBtn").classList.add("flash");
+        return;
+      }
+      document.getElementById("todennakoisyys-container").innerHTML = '';
+      if (!edellinenTulos) return;
+      const nykyinenSumma = edellinenTulos.n + edellinenTulos.m;
+      while (true) {
+        const kortti = kortit[Math.floor(Math.random() * kortit.length)];
+        const jaot = haeSallitutJaot(kortti).filter(j => j.n + j.m === nykyinenSumma);
+        if (jaot.length > 0) {
+          const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti);
+          if (mahdolliset.length === 0) continue;
+          const m0 = mahdolliset.filter(j => j.metodi === 0);
+        const m2 = mahdolliset.filter(j => j.metodi !== 0);
+        if (m0.length > 0 && Math.random() < 0.6) {
+          edellinenTulos = m0[Math.floor(Math.random() * m0.length)];
+        } else {
+          edellinenTulos = mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
+        }
+        viimeKortti = edellinenTulos.kortti;
+          viimeSumma = nykyinenSumma;
+          naytaTulos();
+          break;
+        }
       }
     }
 
     function arvoUusiSumma() {
-      if (!nykyinenKortti) return;
-      const vaihtoehdot = [];
-      [0, 2].forEach(metodi => {
-        const pakka = metodi === 0 ? tuplapakka0 : tuplapakka2;
-        for (let i = 0; i < pakka.length; i++) {
-          if (pakka[i] === nykyinenKortti) {
-            for (let summa = 1; summa <= 42; summa++) {
-              for (let n = 0; n <= summa; n++) {
-                const m = summa - n;
-                const index = 2 * n + m - 1;
-                const maxVisibleIndex = summa - 1;
-                const tuplat = [];
-                for (let j = 0; j < n; j++) {
-                  tuplat.push(pakka[metodi === 0 ? 2 * j : 2 * j + 1]);
-                }
-                const yksittaiset = m > 0 ? [pakka[2 * n + m - 1]] : [];
-                const kaikki = [...tuplat, ...yksittaiset];
-                if ((m - n) < 30 && index === i && index >= maxVisibleIndex && !(metodi === 0 && summa >= 38 && m >= 2) && kaikki.includes(nykyinenKortti)) {
-                  const mahdollinen = { kortti: nykyinenKortti, metodi, n, m };
-                  if (!onSamaTulos(mahdollinen, edellinenTulos)) {
-                    vaihtoehdot.push(mahdollinen);
-                  }
-                  break;
-                }
-              }
-            }
-          }
-        }
-      });
-      if (vaihtoehdot.length > 0) {
-        const satunnainen = vaihtoehdot[Math.floor(Math.random() * vaihtoehdot.length)];
-        edellinenTulos = satunnainen;
-        nykyinenSumma = satunnainen.n + satunnainen.m;
-        naytaTulos(satunnainen);
+      if (selectionLocked) return;
+      document.getElementById("todennakoisyys-container").innerHTML = '';
+      if (!edellinenTulos) return;
+      const kortti = edellinenTulos.kortti;
+      const jaot = haeSallitutJaot(kortti).filter(j => j.n + j.m !== viimeSumma);
+      if (jaot.length > 0) {
+        const m0 = jaot.filter(j => j.metodi === 0);
+      if (m0.length > 0 && Math.random() < 0.6) {
+        edellinenTulos = m0[Math.floor(Math.random() * m0.length)];
+      } else {
+        edellinenTulos = jaot[Math.floor(Math.random() * jaot.length)];
+      }
+        viimeKortti = kortti;
+        viimeSumma = edellinenTulos.n + edellinenTulos.m;
+        naytaTulos();
       }
     }
 
-    function onSamaTulos(a, b) {
-      return a && b && a.kortti === b.kortti && a.metodi === b.metodi && a.n === b.n && a.m === b.m;
+    function naytaTulos() {
+      const maaSymbolit = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
+      const kortti = edellinenTulos.kortti;
+      const arvo = kortti.slice(0, -1);
+      const maa = kortti.slice(-1);
+      const symboli = maaSymbolit[maa] || maa;
+      const color = (maa === 'H' || maa === 'D') ? 'red' : 'black';
+      const korttiSymboli = `${arvo}<span style='color:${color}; font-size: 1.4em'>${symboli}</span>`;
+      const el = document.getElementById("tulos");
+      el.innerHTML = `Card: ${korttiSymboli}<br>Position: ${edellinenTulos.n + edellinenTulos.m}`;
     }
+
+    function kaynnistaVaihtovuorottelu() {
+      let state = false;
+      alternateTimer = setInterval(() => {
+        state = !state;
+        document.getElementById("newCardBtn").classList.toggle("alternate", state);
+        document.getElementById("newPositionBtn").classList.toggle("alternate", !state);
+      }, 2000);
+    }
+
+    function lopetaVilkutus() {
+      clearInterval(alternateTimer);
+      document.getElementById("randomizeBtn").classList.remove("flash");
+      document.getElementById("newCardBtn").classList.remove("alternate");
+      document.getElementById("newPositionBtn").classList.remove("alternate");
+    }
+
+    let selectionLocked = false;
+
+function confirmSelection() {
+      if (!edellinenTulos) return;
+      lopetaVilkutus();
+      const { metodi, n, m } = edellinenTulos;
+      const nStr = String(n).padStart(2, '0');
+      const mStr = String(m).padStart(2, '0');
+      const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "3" : "2");
+      const todennakoisyys = `0.${metodiStr}${nStr}${mStr}%`;
+      const container = document.getElementById("todennakoisyys-container");
+      if (container) {
+        const div = document.createElement("div");
+        div.id = "todennakoisyys";
+        div.className = "probability-text";
+        div.innerHTML = `<br><br>Database updated.<br>Popularity of the selection: ${todennakoisyys}`;
+        container.innerHTML = '';
+        container.appendChild(div);
+      selectionLocked = true;
+        document.getElementById("randomizeBtn").classList.add("flash");
+      }
+    }
+      document.addEventListener("DOMContentLoaded", () => {
+      aloitaVilkutus();
+    });
   </script>
   <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
-    v1.0.5
+    v1.1.0
   </div>
 </body>
 </html>
