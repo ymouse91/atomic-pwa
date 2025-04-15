@@ -101,36 +101,57 @@
   <div id="todennakoisyys-container"></div>
  
   <script>
-    let randomizeTimer, alternateTimer;
-    const kortit = [...new Set(`6H,AS,8S,9S,KC,JD,5D,AH,3H,9H,3C,7S,7H,2S,QS,2H,QH,6D,2C,KD,4D,4H,JH,6C,4C,10C,4S,JS,2D,3S,9D,7D,AD,JC,8C,5S,AC,QC,QD,5H,7C,10H,9C,10D,8D,3D,8H,5C,6S,KH,10S,KS,4H,4D,KD,2C,6D,QH,2H,QS,2S,7H,7S,3C,9H,3H,AH,5D,JD,KC,9S,8S,AS,6H,6C,JH,10C,4C,KS,10S,KH,6S,5C,8H,3D,8D,10D,9C,10H,7C,5H,QD,QC,AC,5S,8C,JC,AD,7D,9D,3S,2D,JS,4S`.replace(/\s/g, '').split(',')
-      .filter((v, i, a) => a.indexOf(v) === i))];
-    let edellinenTulos = null;
-    let viimeKortti = null;
-    let viimeSumma = null;
+    const pakka1 = [
+      "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
+      "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
+      "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
+      "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
+    ];
+
+    const part1 = pakka1.slice(26, 39);
+    const part2 = pakka1.slice(39, 52).reverse();
+    const part3 = pakka1.slice(0, 13);
+    const part4 = pakka1.slice(13, 26).reverse();
+    const secondPack = [
+      ...part1.slice(0, 11).reverse(),
+      ...part1.slice(11),
+      ...part2,
+      ...part3.slice(0, 11).reverse(),
+      ...part3.slice(11),
+      ...part4
+    ];
+
+    const pakka = [];
+    for (let i = 0; i < 52; i++) {
+      pakka.push(pakka1[i]);
+      pakka.push(secondPack[i]);
+    }    
+    const kortit = [...new Set(pakka)];
 
     function getVisible(deck, n, m, method) {
-      const visible = [];
-      const pakka = method === 2 ? [...deck].reverse() : [...deck];
-      let i = 0;
-      for (let j = 0; j < n; j++) {
-        visible.push(method === 0 ? pakka[i + 1] : pakka[i]);
-        i += 2;
-      }
-      for (let j = 0; j < m; j++) {
-        visible.push(pakka[i]);
-        i++;
-      }
+      const d = method === 2 ? [...deck].reverse() : [...deck];
+      let i = 0, visible = [];
+      for (let j = 0; j < n; j++) visible.push(method === 0 ? d[i + 1] : d[i]), i += 2;
+      for (let j = 0; j < m; j++) visible.push(d[i++]);
       return visible;
+    }
+
+    function getLastVisible(deck, n, m, method) {
+      const visible = getVisible(deck, n, m, method);
+      return visible[visible.length - 1];
+    }
+
+    function onkoSallittuJako(n, m, maxLen) {
+      return 2 * n + m <= maxLen && n + m < 38 && m - n < 30;
     }
 
     function haeSallitutJaot(kortti) {
       const tulokset = [];
-      const pakka = `6H,AS,8S,9S,KC,JD,5D,AH,3H,9H,3C,7S,7H,2S,QS,2H,QH,6D,2C,KD,4D,4H,JH,6C,4C,10C,4S,JS,2D,3S,9D,7D,AD,JC,8C,5S,AC,QC,QD,5H,7C,10H,9C,10D,8D,3D,8H,5C,6S,KH,10S,KS,4H,4D,KD,2C,6D,QH,2H,QS,2S,7H,7S,3C,9H,3H,AH,5D,JD,KC,9S,8S,AS,6H,6C,JH,10C,4C,KS,10S,KH,6S,5C,8H,3D,8D,10D,9C,10H,7C,5H,QD,QC,AC,5S,8C,JC,AD,7D,9D,3S,2D,JS,4S`.replace(/\s/g, '').split(',');
       for (let summa = 1; summa <= 52; summa++) {
         for (let method of [0, 2]) {
           for (let n = 0; n <= summa; n++) {
             const m = summa - n;
-            if (2 * n + m > pakka.length || n + m >= 38 || m - n >= 30) continue;
+            if (!onkoSallittuJako(n, m, pakka.length)) continue;
             const näkyvät = getVisible(pakka, n, m, method);
             if (näkyvät[näkyvät.length - 1] === kortti && new Set(näkyvät).size === näkyvät.length) {
               tulokset.push({ kortti, n, m, metodi: method, summa: n + m });
@@ -141,9 +162,43 @@
       }
       return tulokset;
     }
+  // --- Siirretty logiikka jatkuu ---
+
+    let edellinenTulos = null;
+    let viimeKortti = null;
+    let viimeSumma = null;
+    let selectionLocked = false;
+    let alternateTimer;
 
     function aloitaVilkutus() {
       document.getElementById("randomizeBtn").classList.add("flash");
+    }
+
+    function lopetaVilkutus() {
+      clearInterval(alternateTimer);
+      document.getElementById("randomizeBtn").classList.remove("flash");
+      document.getElementById("newCardBtn").classList.remove("alternate");
+      document.getElementById("newPositionBtn").classList.remove("alternate");
+    }
+
+    function kaynnistaVaihtovuorottelu() {
+      let state = false;
+      alternateTimer = setInterval(() => {
+        state = !state;
+        document.getElementById("newCardBtn").classList.toggle("alternate", state);
+        document.getElementById("newPositionBtn").classList.toggle("alternate", !state);
+      }, 2000);
+    }
+
+    function naytaTulos() {
+      const maaSymbolit = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
+      const kortti = edellinenTulos.kortti;
+      const arvo = kortti.slice(0, -1);
+      const maa = kortti.slice(-1);
+      const symboli = maaSymbolit[maa] || maa;
+      const color = (maa === 'H' || maa === 'D') ? 'red' : 'black';
+      const korttiSymboli = `${arvo}<span style='color:${color}; font-size: 1.4em'>${symboli}</span>`;
+      document.getElementById("tulos").innerHTML = `Card: ${korttiSymboli}<br>Position: ${edellinenTulos.n + edellinenTulos.m}`;
     }
 
     function arvoJako() {
@@ -157,12 +212,9 @@
           const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti || (j.n + j.m) !== viimeSumma);
           if (mahdolliset.length === 0) continue;
           const m0 = mahdolliset.filter(j => j.metodi === 0);
-          const m2 = mahdolliset.filter(j => j.metodi !== 0);
-          if (m0.length > 0 && Math.random() < 0.35) {
-            edellinenTulos = m0[Math.floor(Math.random() * m0.length)];
-          } else {
-            edellinenTulos = mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
-          }
+          edellinenTulos = (m0.length > 0 && Math.random() < 0.35)
+            ? m0[Math.floor(Math.random() * m0.length)]
+            : mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
           viimeKortti = edellinenTulos.kortti;
           viimeSumma = edellinenTulos.n + edellinenTulos.m;
           naytaTulos();
@@ -187,13 +239,10 @@
           const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti);
           if (mahdolliset.length === 0) continue;
           const m0 = mahdolliset.filter(j => j.metodi === 0);
-        const m2 = mahdolliset.filter(j => j.metodi !== 0);
-        if (m0.length > 0 && Math.random() < 0.6) {
-          edellinenTulos = m0[Math.floor(Math.random() * m0.length)];
-        } else {
-          edellinenTulos = mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
-        }
-        viimeKortti = edellinenTulos.kortti;
+          edellinenTulos = (m0.length > 0 && Math.random() < 0.35)
+            ? m0[Math.floor(Math.random() * m0.length)]
+            : mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
+          viimeKortti = edellinenTulos.kortti;
           viimeSumma = nykyinenSumma;
           naytaTulos();
           break;
@@ -202,55 +251,26 @@
     }
 
     function arvoUusiSumma() {
-      if (selectionLocked) return;
+      if (selectionLocked) {
+        document.getElementById("randomizeBtn").classList.add("flash");
+        return;
+      }
       document.getElementById("todennakoisyys-container").innerHTML = '';
       if (!edellinenTulos) return;
       const kortti = edellinenTulos.kortti;
       const jaot = haeSallitutJaot(kortti).filter(j => j.n + j.m !== viimeSumma);
       if (jaot.length > 0) {
         const m0 = jaot.filter(j => j.metodi === 0);
-      if (m0.length > 0 && Math.random() < 0.6) {
-        edellinenTulos = m0[Math.floor(Math.random() * m0.length)];
-      } else {
-        edellinenTulos = jaot[Math.floor(Math.random() * jaot.length)];
-      }
+        edellinenTulos = (m0.length > 0 && Math.random() < 0.35)
+          ? m0[Math.floor(Math.random() * m0.length)]
+          : jaot[Math.floor(Math.random() * jaot.length)];
         viimeKortti = kortti;
         viimeSumma = edellinenTulos.n + edellinenTulos.m;
         naytaTulos();
       }
     }
 
-    function naytaTulos() {
-      const maaSymbolit = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
-      const kortti = edellinenTulos.kortti;
-      const arvo = kortti.slice(0, -1);
-      const maa = kortti.slice(-1);
-      const symboli = maaSymbolit[maa] || maa;
-      const color = (maa === 'H' || maa === 'D') ? 'red' : 'black';
-      const korttiSymboli = `${arvo}<span style='color:${color}; font-size: 1.4em'>${symboli}</span>`;
-      const el = document.getElementById("tulos");
-      el.innerHTML = `Card: ${korttiSymboli}<br>Position: ${edellinenTulos.n + edellinenTulos.m}`;
-    }
-
-    function kaynnistaVaihtovuorottelu() {
-      let state = false;
-      alternateTimer = setInterval(() => {
-        state = !state;
-        document.getElementById("newCardBtn").classList.toggle("alternate", state);
-        document.getElementById("newPositionBtn").classList.toggle("alternate", !state);
-      }, 2000);
-    }
-
-    function lopetaVilkutus() {
-      clearInterval(alternateTimer);
-      document.getElementById("randomizeBtn").classList.remove("flash");
-      document.getElementById("newCardBtn").classList.remove("alternate");
-      document.getElementById("newPositionBtn").classList.remove("alternate");
-    }
-
-    let selectionLocked = false;
-
-function confirmSelection() {
+    function confirmSelection() {
       if (!edellinenTulos) return;
       lopetaVilkutus();
       const { metodi, n, m } = edellinenTulos;
@@ -266,16 +286,24 @@ function confirmSelection() {
         div.innerHTML = `<br><br>Database updated.<br>Popularity of the selection: ${todennakoisyys}`;
         container.innerHTML = '';
         container.appendChild(div);
-      selectionLocked = true;
+        selectionLocked = true;
         document.getElementById("randomizeBtn").classList.add("flash");
       }
     }
-      document.addEventListener("DOMContentLoaded", () => {
+
+    
+
+    document.addEventListener("DOMContentLoaded", () => {
       aloitaVilkutus();
+      document.getElementById("randomizeBtn").onclick = arvoJako;
+      document.getElementById("newCardBtn").onclick = arvoUusiKortti;
+      document.getElementById("newPositionBtn").onclick = arvoUusiSumma;
+      document.getElementById("confirmBtn").onclick = confirmSelection;
     });
   </script>
+
   <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
-    v1.1.0
+    v1.1.1
   </div>
 </body>
 </html>
