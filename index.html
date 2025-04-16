@@ -142,9 +142,15 @@
     }
 
     function onkoSallittuJako(n, m, maxLen) {
-      return 2 * n + m <= maxLen && n + m < 42 && m - n < 31 && (2 * n + m) >= Math.ceil(0.8 * (n + m));
-    }
-
+      const used = 2 * n + m;
+      const declared = n + m;
+      return (
+         m - n < 31 &&
+        used <= maxLen &&
+        declared < 42 &&
+        (used - declared) <= 20
+      );
+   }
     function haeSallitutJaot(kortti) {
       const tulokset = [];
       for (let summa = 1; summa <= 52; summa++) {
