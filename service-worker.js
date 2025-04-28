@@ -1,4 +1,7 @@
-const CACHE_NAME = 'atomic-stats-cache-v2'; // Vaihda tätä uuteen versioon julkaistaessa
+// Päivitetty Service Worker (versio 3)
+
+const CACHE_VERSION = 'v3'; // Päivitä tämä aina julkaistessa uusi versio
+const CACHE_NAME = `atomic-stats-cache-${CACHE_VERSION}`;
 const FILES_TO_CACHE = [
   './',
   './index.html',
@@ -7,38 +10,45 @@ const FILES_TO_CACHE = [
   './icon-512.png'
 ];
 
-// Asennusvaihe – cachetaa tiedostot ja ohita odotus
+// Asennusvaihe: cachetetaan tiedostot
 self.addEventListener('install', event => {
+  console.log('[Service Worker] Installing and caching app shell');
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.addAll(FILES_TO_CACHE);
+    })
   );
 });
 
-// Aktivointivaihe – poistaa vanhat cachet ja ottaa hallinnan
+// Aktivointi: poistetaan vanhat cachet
 self.addEventListener('activate', event => {
+  console.log('[Service Worker] Activating new service worker...');
   event.waitUntil(
     caches.keys().then(cacheNames =>
       Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
-                  .map(name => caches.delete(name))
+        cacheNames.map(name => {
+          if (name !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting old cache:', name);
+            return caches.delete(name);
+          }
+        })
       )
     )
   );
   self.clients.claim();
 });
 
-// Fetch – vastaa cachella tai hakee verkosta
+// Fetch: palvelee cachella tai hakee verkosta
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
 
-// Viesti skipWaiting-komennolle (jos käytät frontendissä päivityspainiketta)
+// Kuuntelee skipWaiting-komentoa
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
-
