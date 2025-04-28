@@ -3,25 +3,21 @@
 <head>
   <link rel="manifest" href="manifest.json">
   <script>
-   if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('service-worker.js').then(reg => {
-      // Rekisteröityminen onnistui, tarkistetaan päivitys
-      if (reg) {
-        reg.update(); // Pakottaa tarkistamaan päivitykset
-      }
-    }).catch(err => {
-      console.error('Service workerin rekisteröinti epäonnistui:', err);
-    });
-  });
-}
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('service-worker.js').then(reg => {
+          if (reg) reg.update();
+        }).catch(err => {
+          console.error('Service workerin rekisteröinti epäonnistui:', err);
+        });
+      });
+    }
   </script>
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Department of Psychology</title>
   <style>
     body {
@@ -92,224 +88,174 @@
   <h1>University of Birmingham</h1>
   <h2>CogniCard Study</h2>
   <div class="button-container">
-    <button id="randomizeBtn" onclick="arvoJako()">Randomize</button>
-    <button id="newCardBtn" onclick="arvoUusiKortti()">New Card</button>
-    <button id="newPositionBtn" onclick="arvoUusiSumma()">New Position</button>
-    <button onclick="confirmSelection()">Confirm Selection</button>
+    <button id="randomizeBtn">Randomize</button>
+    <button id="newCardBtn">New Card</button>
+    <button id="newPositionBtn">New Position</button>
+    <button id="confirmBtn">Confirm Selection</button>
   </div>
   <div id="tulos"></div>
   <div id="todennakoisyys-container"></div>
- 
-  <script>
-    const pakka1 = [
-      "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
-      "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
-      "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
-      "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
-    ];
 
-    const part1 = pakka1.slice(26, 39);
-    const part2 = pakka1.slice(39, 52).reverse();
-    const part3 = pakka1.slice(0, 13);
-    const part4 = pakka1.slice(13, 26).reverse();
-    const secondPack = [
-      ...part1.slice(0, 11).reverse(),
-      ...part1.slice(11),
-      ...part2,
-      ...part3.slice(0, 11).reverse(),
-      ...part3.slice(11),
-      ...part4
-    ];
+<script>
+// Toiminnallinen JavaScript palautettu
 
-    const pakka = [];
-    for (let i = 0; i < 52; i++) {
-      pakka.push(pakka1[i]);
-      pakka.push(secondPack[i]);
-    }    
-    const kortit = [...new Set(pakka)];
+const pakka1 = [
+  "6H", "8S", "KC", "5D", "3H", "3C", "7H", "QS", "QH", "2C", "4D", "JH", "4C",
+  "4S", "2D", "9D", "AD", "8C", "AC", "QD", "7C", "9C", "8D", "8H", "6S", "10S",
+  "4H", "KD", "6D", "2H", "2S", "7S", "9H", "AH", "JD", "9S", "AS", "6C", "10C",
+  "KS", "KH", "5C", "3D", "10D", "10H", "5H", "QC", "5S", "JC", "7D", "3S", "JS"
+];
 
-    function getVisible(deck, n, m, method) {
-      const d = method === 2 ? [...deck].reverse() : [...deck];
-      let i = 0, visible = [];
-      for (let j = 0; j < n; j++) visible.push(method === 0 ? d[i + 1] : d[i]), i += 2;
-      for (let j = 0; j < m; j++) visible.push(d[i++]);
-      return visible;
-    }
+const part1 = pakka1.slice(26, 39);
+const part2 = pakka1.slice(39, 52).reverse();
+const part3 = pakka1.slice(0, 13);
+const part4 = pakka1.slice(13, 26).reverse();
+const secondPack = [...part1.slice(0, 11).reverse(), ...part1.slice(11), ...part2, ...part3.slice(0, 11).reverse(), ...part3.slice(11), ...part4];
 
-    function getLastVisible(deck, n, m, method) {
-      const visible = getVisible(deck, n, m, method);
-      return visible[visible.length - 1];
-    }
+const pakka = [];
+for (let i = 0; i < 52; i++) {
+  pakka.push(pakka1[i]);
+  pakka.push(secondPack[i]);
+}
 
-    function onkoSallittuJako(n, m, maxLen) {
-      const used = 2 * n + m;
-      const declared = n + m;
-      return (
-         m - n < 31 &&
-        used <= maxLen &&
-        declared < 42 &&
-        (used - declared) <= 20
-      );
-   }
-    function haeSallitutJaot(kortti) {
-      const tulokset = [];
-      for (let summa = 1; summa <= 52; summa++) {
-        for (let method of [0, 2]) {
-          for (let n = 0; n <= summa; n++) {
-            const m = summa - n;
-            if (!onkoSallittuJako(n, m, pakka.length)) continue;
-            const näkyvät = getVisible(pakka, n, m, method);
-            if (näkyvät[näkyvät.length - 1] === kortti && new Set(näkyvät).size === näkyvät.length) {
-              tulokset.push({ kortti, n, m, metodi: method, summa: n + m });
-              break;
-            }
-          }
-        }
-      }
-      return tulokset;
-    }
-  // --- Siirretty logiikka jatkuu ---
+const kortit = [...new Set(pakka)];
 
-    let edellinenTulos = null;
-    let viimeKortti = null;
-    let viimeSumma = null;
-    let selectionLocked = false;
-    let alternateTimer;
+let edellinenTulos = null;
+let viimeKortti = null;
+let viimeSumma = null;
+let selectionLocked = false;
+let alternateTimer;
 
-    function aloitaVilkutus() {
-      document.getElementById("randomizeBtn").classList.add("flash");
-    }
+function getVisible(deck, n, m, method) {
+  const d = method === 2 ? [...deck].reverse() : [...deck];
+  let i = 0, visible = [];
+  for (let j = 0; j < n; j++) visible.push(method === 0 ? d[i + 1] : d[i]), i += 2;
+  for (let j = 0; j < m; j++) visible.push(d[i++]);
+  return visible;
+}
 
-    function lopetaVilkutus() {
-      clearInterval(alternateTimer);
-      document.getElementById("randomizeBtn").classList.remove("flash");
-      document.getElementById("newCardBtn").classList.remove("alternate");
-      document.getElementById("newPositionBtn").classList.remove("alternate");
-    }
+function onkoSallittuJako(n, m, maxLen) {
+  const used = 2 * n + m;
+  const declared = n + m;
+  return (
+    m - n < 31 &&
+    used <= maxLen &&
+    declared < 42 &&
+    (used - declared) <= 20
+  );
+}
 
-    function kaynnistaVaihtovuorottelu() {
-      let state = false;
-      alternateTimer = setInterval(() => {
-        state = !state;
-        document.getElementById("newCardBtn").classList.toggle("alternate", state);
-        document.getElementById("newPositionBtn").classList.toggle("alternate", !state);
-      }, 2000);
-    }
-
-    function naytaTulos() {
-      const maaSymbolit = { 'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣' };
-      const kortti = edellinenTulos.kortti;
-      const arvo = kortti.slice(0, -1);
-      const maa = kortti.slice(-1);
-      const symboli = maaSymbolit[maa] || maa;
-      const color = (maa === 'H' || maa === 'D') ? 'red' : 'black';
-      const korttiSymboli = `${arvo}<span style='color:${color}; font-size: 1.4em'>${symboli}</span>`;
-      document.getElementById("tulos").innerHTML = `Card: ${korttiSymboli}<br>Position: ${edellinenTulos.n + edellinenTulos.m}`;
-    }
-
-    function arvoJako() {
-      selectionLocked = false;
-      document.getElementById("todennakoisyys-container").innerHTML = '';
-      lopetaVilkutus();
-      while (true) {
-        const kortti = kortit[Math.floor(Math.random() * kortit.length)];
-        const jaot = haeSallitutJaot(kortti);
-        if (jaot.length > 0) {
-          const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti || (j.n + j.m) !== viimeSumma);
-          if (mahdolliset.length === 0) continue;
-          const m0 = mahdolliset.filter(j => j.metodi === 0);
-          edellinenTulos = (m0.length > 0 && Math.random() < 0.35)
-            ? m0[Math.floor(Math.random() * m0.length)]
-            : mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
-          viimeKortti = edellinenTulos.kortti;
-          viimeSumma = edellinenTulos.n + edellinenTulos.m;
-          naytaTulos();
-          kaynnistaVaihtovuorottelu();
+function haeSallitutJaot(kortti) {
+  const tulokset = [];
+  for (let summa = 1; summa <= 52; summa++) {
+    for (let method of [0, 2]) {
+      for (let n = 0; n <= summa; n++) {
+        const m = summa - n;
+        if (!onkoSallittuJako(n, m, pakka.length)) continue;
+        const näkyvät = getVisible(pakka, n, m, method);
+        if (näkyvät.length > 0 && näkyvät[näkyvät.length - 1] === kortti && new Set(näkyvät).size === näkyvät.length) {
+          tulokset.push({ kortti, n, m, metodi: method, summa: n + m });
           break;
         }
       }
     }
+  }
+  return tulokset;
+}
 
-    function arvoUusiKortti() {
-      if (selectionLocked) {
-        document.getElementById("randomizeBtn").classList.add("flash");
-        return;
-      }
-      document.getElementById("todennakoisyys-container").innerHTML = '';
-      if (!edellinenTulos) return;
-      const nykyinenSumma = edellinenTulos.n + edellinenTulos.m;
-      while (true) {
-        const kortti = kortit[Math.floor(Math.random() * kortit.length)];
-        const jaot = haeSallitutJaot(kortti).filter(j => j.n + j.m === nykyinenSumma);
-        if (jaot.length > 0) {
-          const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti);
-          if (mahdolliset.length === 0) continue;
-          const m0 = mahdolliset.filter(j => j.metodi === 0);
-          edellinenTulos = (m0.length > 0 && Math.random() < 0.35)
-            ? m0[Math.floor(Math.random() * m0.length)]
-            : mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
-          viimeKortti = edellinenTulos.kortti;
-          viimeSumma = nykyinenSumma;
-          naytaTulos();
-          break;
-        }
-      }
+function aloitaVilkutus() {
+  document.getElementById("randomizeBtn").classList.add("flash");
+}
+
+function lopetaVilkutus() {
+  if (alternateTimer) clearInterval(alternateTimer);
+  ["randomizeBtn", "newCardBtn", "newPositionBtn"].forEach(id => document.getElementById(id).classList.remove("flash", "alternate"));
+}
+
+function kaynnistaVaihtovuorottelu() {
+  let state = false;
+  alternateTimer = setInterval(() => {
+    state = !state;
+    document.getElementById("newCardBtn").classList.toggle("alternate", state);
+    document.getElementById("newPositionBtn").classList.toggle("alternate", !state);
+  }, 2000);
+}
+
+function naytaTulos() {
+  if (!edellinenTulos) return;
+  const maaSymbolit = { S: '♠', H: '♥', D: '♦', C: '♣' };
+  const kortti = edellinenTulos.kortti;
+  const arvo = kortti.slice(0, -1);
+  const maa = kortti.slice(-1);
+  const symboli = maaSymbolit[maa] || maa;
+  const color = (maa === 'H' || maa === 'D') ? 'red' : 'black';
+  document.getElementById("tulos").innerHTML = `Card: ${arvo}<span style='color:${color}; font-size: 1.4em'>${symboli}</span><br>Position: ${edellinenTulos.n + edellinenTulos.m}`;
+}
+
+function arvoUusi(vaihdaKorttia = false, vaihdaSummaa = false) {
+  if (selectionLocked) return document.getElementById("randomizeBtn").classList.add("flash");
+  if (!edellinenTulos) return;
+  document.getElementById("todennakoisyys-container").innerHTML = '';
+  const nykyinenSumma = edellinenTulos.n + edellinenTulos.m;
+  while (true) {
+    const kortti = vaihdaKorttia ? kortit[Math.floor(Math.random() * kortit.length)] : edellinenTulos.kortti;
+    let jaot = haeSallitutJaot(kortti);
+    if (vaihdaSummaa) jaot = jaot.filter(j => j.n + j.m !== viimeSumma);
+    else jaot = jaot.filter(j => j.n + j.m === nykyinenSumma);
+    if (jaot.length > 0) {
+      const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti || vaihdaSummaa);
+      const m0 = mahdolliset.filter(j => j.metodi === 0);
+      edellinenTulos = (m0.length > 0 && Math.random() < 0.35) ? m0[Math.floor(Math.random() * m0.length)] : mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
+      viimeKortti = edellinenTulos.kortti;
+      viimeSumma = edellinenTulos.n + edellinenTulos.m;
+      naytaTulos();
+      break;
     }
+  }
+}
 
-    function arvoUusiSumma() {
-      if (selectionLocked) {
-        document.getElementById("randomizeBtn").classList.add("flash");
-        return;
-      }
-      document.getElementById("todennakoisyys-container").innerHTML = '';
-      if (!edellinenTulos) return;
-      const kortti = edellinenTulos.kortti;
-      const jaot = haeSallitutJaot(kortti).filter(j => j.n + j.m !== viimeSumma);
-      if (jaot.length > 0) {
-        const m0 = jaot.filter(j => j.metodi === 0);
-        edellinenTulos = (m0.length > 0 && Math.random() < 0.35)
-          ? m0[Math.floor(Math.random() * m0.length)]
-          : jaot[Math.floor(Math.random() * jaot.length)];
-        viimeKortti = kortti;
-        viimeSumma = edellinenTulos.n + edellinenTulos.m;
-        naytaTulos();
-      }
+function arvoJako() {
+  selectionLocked = false;
+  document.getElementById("todennakoisyys-container").innerHTML = '';
+  lopetaVilkutus();
+  while (true) {
+    const kortti = kortit[Math.floor(Math.random() * kortit.length)];
+    const jaot = haeSallitutJaot(kortti);
+    if (jaot.length > 0) {
+      const mahdolliset = jaot.filter(j => j.kortti !== viimeKortti || (j.n + j.m) !== viimeSumma);
+      if (mahdolliset.length === 0) continue;
+      const m0 = mahdolliset.filter(j => j.metodi === 0);
+      edellinenTulos = (m0.length > 0 && Math.random() < 0.35) ? m0[Math.floor(Math.random() * m0.length)] : mahdolliset[Math.floor(Math.random() * mahdolliset.length)];
+      viimeKortti = edellinenTulos.kortti;
+      viimeSumma = edellinenTulos.n + edellinenTulos.m;
+      naytaTulos();
+      kaynnistaVaihtovuorottelu();
+      break;
     }
+  }
+}
 
-    function confirmSelection() {
-      if (!edellinenTulos) return;
-      lopetaVilkutus();
-      const { metodi, n, m } = edellinenTulos;
-      const nStr = String(n).padStart(2, '0');
-      const mStr = String(m).padStart(2, '0');
-      const metodiStr = metodi === 0 ? "0" : (n === (n + m) ? "3" : "2");
-      const todennakoisyys = `0.${metodiStr}${nStr}${mStr}%`;
-      const container = document.getElementById("todennakoisyys-container");
-      if (container) {
-        const div = document.createElement("div");
-        div.id = "todennakoisyys";
-        div.className = "probability-text";
-        div.innerHTML = `<br><br>Database updated.<br>Popularity of the selection: ${todennakoisyys}`;
-        container.innerHTML = '';
-        container.appendChild(div);
-        selectionLocked = true;
-        document.getElementById("randomizeBtn").classList.add("flash");
-      }
-    }
+function confirmSelection() {
+  if (!edellinenTulos) return;
+  lopetaVilkutus();
+  const { metodi, n, m } = edellinenTulos;
+  const todennakoisyys = `0.${metodi === 0 ? "0" : (n === (n+m) ? "3" : "2")}${String(n).padStart(2, '0')}${String(m).padStart(2, '0')}%`;
+  document.getElementById("todennakoisyys-container").innerHTML = `<div id='todennakoisyys' class='probability-text'><br><br>Database updated.<br>Popularity of the selection: ${todennakoisyys}</div>`;
+  selectionLocked = true;
+  document.getElementById("randomizeBtn").classList.add("flash");
+}
 
-    
+document.addEventListener("DOMContentLoaded", () => {
+  aloitaVilkutus();
+  document.getElementById("randomizeBtn").onclick = arvoJako;
+  document.getElementById("newCardBtn").onclick = () => arvoUusi(true, false);
+  document.getElementById("newPositionBtn").onclick = () => arvoUusi(false, true);
+  document.getElementById("confirmBtn").onclick = confirmSelection;
+});
+</script>
 
-    document.addEventListener("DOMContentLoaded", () => {
-      aloitaVilkutus();
-      document.getElementById("randomizeBtn").onclick = arvoJako;
-      document.getElementById("newCardBtn").onclick = arvoUusiKortti;
-      document.getElementById("newPositionBtn").onclick = arvoUusiSumma;
-      document.getElementById("confirmBtn").onclick = confirmSelection;
-    });
-  </script>
-
-  <div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
-    v1.2.1
-  </div>
+<div style="position: fixed; bottom: 0.5rem; left: 1rem; font-size: 0.8rem; color: #666; font-family: Georgia, serif;">
+  v1.2.2
+</div>
 </body>
 </html>
