@@ -244,13 +244,25 @@ function confirmSelection() {
   selectionLocked = true;
   document.getElementById("randomizeBtn").classList.add("flash");
 }
+  
+// Debounce-funktio suojaamaan nopeilta moniklikkauksilta
+function debounce(func, delay = 1000) {
+  let timeout;
+  return function(...args) {
+    if (timeout) return; // Jos jo odotetaan, älä tee mitään
+    func.apply(this, args);
+    timeout = setTimeout(() => {
+      timeout = null;
+    }, delay);
+  };
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   aloitaVilkutus();
-  document.getElementById("randomizeBtn").onclick = arvoJako;
-  document.getElementById("newCardBtn").onclick = () => arvoUusi(true, false);
-  document.getElementById("newPositionBtn").onclick = () => arvoUusi(false, true);
-  document.getElementById("confirmBtn").onclick = confirmSelection;
+document.getElementById("randomizeBtn").onclick = debounce(arvoJako);
+document.getElementById("newCardBtn").onclick = debounce(() => arvoUusi(true, false));
+document.getElementById("newPositionBtn").onclick = debounce(() => arvoUusi(false, true));
+document.getElementById("confirmBtn").onclick = debounce(confirmSelection);
 });
 </script>
 
