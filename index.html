@@ -82,11 +82,18 @@
       font-family: 'Courier New', monospace;
       color: #444;
     }
+    .logo {
+      max-width: 300px;
+      margin-bottom: 0.25rem;
+    }
   </style>
 </head>
 <body>
-  <h1>University of Birmingham</h1>
-  <h2>Cognition Study</h2>
+  <div>
+    <img src="uob.png" alt="University of Birmingham" class="logo" onerror="this.style.display='none'; document.getElementById('fallbackTitle').style.display='block'">
+    <h1 id="fallbackTitle" style="display: none;">University of Birmingham</h1>
+  </div>
+  <h2>CogniCard Study</h2>
   <div class="button-container">
     <button id="randomizeBtn">Randomize</button>
     <button id="newCardBtn">New Card</button>

@@ -1,6 +1,6 @@
 // Päivitetty Service Worker (versio 3)
 
-const CACHE_VERSION = 'v5'; // Päivitä tämä aina julkaistessa uusi versio
+const CACHE_VERSION = 'v6'; // Päivitä tämä aina julkaistessa uusi versio
 const CACHE_NAME = `atomic-stats-cache-${CACHE_VERSION}`;
 const FILES_TO_CACHE = [
   './',
